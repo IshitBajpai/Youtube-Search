@@ -1,6 +1,10 @@
 from traceback import print_tb
 from googleapiclient.discovery import build
 from requests import request
+import os
+import re
+from datetime import timedelta
+
 
 key = 'AIzaSyA5QDUfbdWNSjkVr-ypMYmxI2eXOyjB6sQ'
 yt = build('youtube', 'v3', developerKey = key)
@@ -17,7 +21,7 @@ def searchPlaylist(search): # channelid : { playlistname Channeltitle}
     for i in search_response['items']:
         channel_id[i['snippet']["channelId"]]={ 'pltitle':i['snippet']['title'] , 'ctitle' : i['snippet']['channelTitle'] }
     print(channel_id)
-    return channel_i
+    return channel_id
 
 
 def getChannedetails(channel_id):
@@ -39,21 +43,40 @@ def getPLdetails(channel_id,keyword): # pass channel id dictionary
                 pl[i] =  { 'plid' : j['id'] , 'pltitle' : j['snippet']['title'] , 'plcount': j['contentDetails']['itemCount']}
                 #print(j['id']," : ",j['snippet']['title'] )
     #print(pl_response)
-    print(pl)
+    #print(pl)
     return pl
 
-def getVideosInPL (pl): # returns vid with video title and pltitle
+def getVideosInPL (pl): # returns vid with video title and pltitle , pass above value
+    plVid = {}
     for j in pl:
-            plVid_request = yt.playlistItems().list (
-                part = 'snippet,contentDetails,id',
-                playlistId = pl[j]['plid']
-            )
+            nextPageToken = None
+            count = 1
+            platylistvidforchannel = {}
+            while True:
 
-            plVid = {}
-            plVid_response = plVid_request.execute()
-            for i in plVid_response['items']:
-                plVid[i['contentDetails']['videoId']] = {'videotitle': i['snippet']['title'] , 'pltitle': pl[j]['pltitle']  }
+                plVid_request = yt.playlistItems().list (
+                    part = 'snippet,contentDetails,id',
+                    playlistId = pl[j]['plid'],
+                    maxResults = 50,
+                    pageToken = nextPageToken
+                )
+
+                
+                plVid_response = plVid_request.execute()
+                #print(plVid_response)
+                for i in plVid_response['items']:
+                    platylistvidforchannel[count] = {'videoid':i['contentDetails']['videoId'] ,'videotitle': i['snippet']['title'] , 'pltitle': pl[j]['pltitle']  }
+                    count += 1
+            
+                nextPageToken = plVid_response.get('nextPageToken')
+                if(nextPageToken == None):
+                    break
+                
+            plVid[j] = platylistvidforchannel
+            
+
     print(plVid)
+    print()
     return plVid
 
 def computelikes(plvid):
@@ -85,9 +108,79 @@ def computelikes(plvid):
             viewCount += i['statistics']['viewCount']
             commentCount += i['statistics']['commentCount']
 
+def computeStats(plvid):
+    stats = {}
+    for i in plvid:
+        likes = 0
+        viewCount = 0
+        commentCount = 0 
+        for j in plvid[i]:
+            vid = plvid[i][j]['videoid']
+            Vid_request = yt.videos().list (
+                part = 'statistics',
+                id = vid
+            )
+            vid_response = Vid_request.execute()
+            #print(vid_response)
 
-def displayall (): # number of videos , channel name , total time , 
-    pass
+            likes += int(vid_response['items'][0]['statistics']['likeCount'])
+            viewCount += int(vid_response['items'][0]['statistics']['viewCount'])
+            commentCount += int(vid_response['items'][0]['statistics']['commentCount'])
+
+        stats[i] = {'likes':likes,'viewCount':viewCount,'commentCount':commentCount}
+    print(stats)
+    return stats
+
+
+def computeDurationofPlaylist(plvid): 
+    durations ={}
+    hour = re.compile(r'(\d+)H')
+    min = re.compile(r'(\d+)M')
+    sec = re.compile (r'(\d+)S')
+    for i in plvid:
+        total_seconds = 0 
+        for j in plvid[i]:
+            vid = plvid[i][j]['videoid']
+            vid_request = yt.videos().list (
+                part = 'contentDetails',
+                id = vid
+            )
+            vid_response = vid_request.execute()
+
+            duration = vid_response['items'][0]['contentDetails']['duration']
+            hours = hour.search(duration)
+            minutes = min.search(duration)
+            seconds = sec.search(duration)
+
+            if(hours!=None):
+                hours = int(hours.group(1))
+            else:
+                hours=0
+            if(minutes!=None):
+                minutes = int(minutes.group(1))
+            else:
+                minutes=0
+            if(seconds!=None):
+                seconds = int(seconds.group(1))
+            else:
+                seconds = 0
+          
+
+            All_seconds = timedelta(
+                hours=hours,
+                minutes = minutes,
+                seconds=seconds
+            ).total_seconds()
+            
+            total_seconds += int(All_seconds)
+
+        minutes , seconds = divmod(total_seconds,60)
+        hours , minutes = divmod(minutes,60)
+        total_duration = "H:"+str(int(hours))+" M:"+str(int(minutes))+" S:"+str(int(seconds))
+        # print(total_duration)
+        durations[i]={'duration':total_duration}
+    print(durations)
+    return duration
 
 def main():
     # keyword = input("Enter Playlist word to search")
@@ -95,7 +188,10 @@ def main():
 
     x=searchPlaylist(2)
     y= getPLdetails(x,'pandas')
-    getVideosInPL(y)
+    z=getVideosInPL(y)
+    computeStats(z)
+    print()
+    computeDurationofPlaylist(z)
 
    
 
