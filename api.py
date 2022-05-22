@@ -14,7 +14,7 @@ def searchPlaylist(search): # channelid : { playlistname Channeltitle}
     search_request = yt.search().list(
         part = 'snippet',
         maxResults = 2, 
-        q = 'pandas playlist'   # modify this later
+        q =  search  # modify this later
     )
     search_response = search_request.execute()
     channel_id = {}         # stores channel id along with the playlist
@@ -27,7 +27,7 @@ def searchPlaylist(search): # channelid : { playlistname Channeltitle}
 def getChannedetails(channel_id):
     pass
 
-def getPLdetails(channel_id,keyword): # pass channel id dictionary
+def getPLdetails(channel_id): # pass channel id dictionary
     pl = {} 
     for i in channel_id:
         print('channel id :',i)
@@ -182,21 +182,21 @@ def computeDurationofPlaylist(plvid):
     print(durations)
     return duration
 
-def main():
-    # keyword = input("Enter Playlist word to search")
-    # search = keyword + " playlist"
+# def main():
+#     # keyword = input("Enter Playlist word to search")
+#     # search = keyword + " playlist"
 
-    x=searchPlaylist(2)
-    y= getPLdetails(x,'pandas')
-    z=getVideosInPL(y)
-    computeStats(z)
-    print()
-    computeDurationofPlaylist(z)
+#     x=searchPlaylist(2)
+#     y= getPLdetails(x,'pandas')
+#     z=getVideosInPL(y)
+#     computeStats(z)
+#     print()
+#     computeDurationofPlaylist(z)
 
    
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
 """ 
