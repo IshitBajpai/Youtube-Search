@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 
 
-key = 'AIzaSyA5QDUfbdWNSjkVr-ypMYmxI2eXOyjB6sQ'
+key = ''
 yt = build('youtube', 'v3', developerKey=key)
 
 
